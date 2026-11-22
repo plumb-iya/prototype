@@ -18,7 +18,8 @@ import { useStore } from "@/store"
 import { cn } from "@/lib/utils"
 
 type Cat = "all" | Rule["category"]
-const RULE_COLS = "grid grid-cols-[104px_minmax(0,1fr)_minmax(0,1.15fr)_96px] gap-x-6"
+// On a phone each rule becomes a stacked card.
+const RULE_COLS = "grid grid-cols-[104px_minmax(0,1fr)_minmax(0,1.15fr)_96px] gap-x-6 max-md:grid-cols-1 max-md:gap-y-1.5"
 
 export function Rules() {
   const { state } = useStore()
@@ -40,7 +41,7 @@ export function Rules() {
         />
       </div>
       <div className="overflow-hidden rounded-xl bg-surface shadow-panel">
-        <div className={cn(RULE_COLS, "section-label h-9 items-center border-b border-line px-4")}>
+        <div className={cn(RULE_COLS, "section-label h-9 items-center border-b border-line px-4 max-md:hidden")}>
           <span>Category</span>
           <span>Rule</span>
           <span>Why</span>
@@ -48,7 +49,7 @@ export function Rules() {
         </div>
         {rows.map((r, idx) => (
           <div key={r.id} className={cn(RULE_COLS, "items-start px-4 py-4", idx > 0 && "border-t border-line", r.isNew && "bg-ok-soft/50")}>
-            <span className="text-caption text-muted">{r.category}</span>
+            <span className="text-caption text-muted max-md:section-label">{r.category}</span>
             <div className="min-w-0">
               <div className="flex items-center gap-2 font-medium">
                 {r.name}
@@ -57,9 +58,9 @@ export function Rules() {
               <div className="mt-1 font-mono text-small text-muted">{r.value}</div>
             </div>
             <p className="leading-relaxed text-ink-2">{r.why}</p>
-            <div className="text-right">
+            <div className="text-right max-md:flex max-md:gap-2 max-md:text-left max-md:text-caption max-md:text-muted">
               <div>{r.scope}</div>
-              <div className="mt-0.5 font-mono text-small text-muted">v{r.version}</div>
+              <div className="mt-0.5 font-mono text-small text-muted max-md:mt-0">v{r.version}</div>
             </div>
           </div>
         ))}
@@ -81,7 +82,7 @@ export function History() {
 
   return (
     <Page title="History" description={`Every change to ${SYSTEM_NAME}, newest first. If a change causes problems, revert the live version.`}>
-      <div className="grid grid-cols-[300px_minmax(0,1fr)] gap-8">
+      <div className="grid grid-cols-[300px_minmax(0,1fr)] gap-8 max-md:grid-cols-1 max-md:gap-5">
         <Timeline aria-label="Versions" className="flex flex-col">
           {state.versions.map((v, i) => {
             const active = v.version === current?.version
@@ -116,7 +117,7 @@ export function History() {
 
         {current && (
           <section aria-label={`Changes in v${current.version}`}>
-            <div className="mb-3 flex min-h-8 items-center justify-between gap-4">
+            <div className="mb-3 flex min-h-8 items-center justify-between gap-4 max-md:flex-col max-md:items-start max-md:gap-2.5">
               <div>
                 <h2 className="text-body font-medium">What changed in v{current.version}</h2>
                 <p className="text-caption text-muted">{current.summary}</p>
@@ -179,7 +180,7 @@ export function Tools() {
     <Page title="Tools" description="Plumb checks every screen these tools produce, and keeps your rules in each one." width="max-w-[760px]">
       <div className="overflow-hidden rounded-xl bg-surface shadow-panel">
         {state.tools.map((t, idx) => (
-          <div key={t.id} className={cn("flex min-h-[68px] items-center gap-4 px-4 py-3", idx > 0 && "border-t border-line")}>
+          <div key={t.id} className={cn("flex min-h-[68px] items-center gap-4 px-4 py-3 max-md:flex-wrap max-md:gap-3", idx > 0 && "border-t border-line")}>
             <ToolTile id={t.id} className="size-9 text-ui" />
             <div className="min-w-0 flex-1">
               <div className="text-body font-medium">{t.name}</div>

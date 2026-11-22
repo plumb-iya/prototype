@@ -29,8 +29,8 @@ export function RuleFlow() {
   return (
     <Dialog open={!!flow?.open} onOpenChange={(o) => !o && dispatch({ type: "closeFlow" })}>
       <DialogBackdrop className={dialogBackdrop} />
-      <DialogContent initialFocus="content" className={cn(dialogContent, "top-[7vh] grid max-w-[920px] grid-cols-[232px_minmax(0,1fr)] overflow-hidden p-0")}>
-        <aside className="border-r border-line bg-paper/70 p-5">
+      <DialogContent initialFocus="content" className={cn(dialogContent, "top-[7vh] grid max-w-[920px] grid-cols-[232px_minmax(0,1fr)] overflow-hidden p-0 max-md:top-[4vh] max-md:grid-cols-1")}>
+        <aside className="border-r border-line bg-paper/70 p-5 max-md:hidden">
           <div className="text-body font-medium">Make it a rule</div>
           <DialogDescription className="mt-0.5 mb-7 text-caption leading-snug text-muted">From the flag “{issue?.title}”</DialogDescription>
           <Timeline aria-label="Steps" className="flex flex-col">
@@ -52,7 +52,7 @@ export function RuleFlow() {
           </Timeline>
         </aside>
 
-        <div className="relative flex max-h-[80vh] min-h-[520px] flex-col">
+        <div className="relative flex max-h-[80vh] min-h-[520px] flex-col max-md:max-h-[90dvh] max-md:min-h-0">
           <DialogClose aria-label="Close" className={buttonClass("ghost", "icon", "absolute top-3 right-3 z-10")}>
             <XIcon />
           </DialogClose>
@@ -67,14 +67,14 @@ export function RuleFlow() {
 
 function StepHeader({ title }: { title: string }) {
   return (
-    <div className="px-7 pt-6 pb-4">
+    <div className="px-7 pt-6 pb-4 max-md:px-5 max-md:pt-5 max-md:pr-12">
       <DialogTitle className="font-display text-[21px] font-bold tracking-tight">{title}</DialogTitle>
     </div>
   )
 }
 
 function Footer({ children }: { children: React.ReactNode }) {
-  return <div className="mt-auto flex items-center gap-2 border-t border-line bg-paper/40 px-7 py-3.5">{children}</div>
+  return <div className="mt-auto flex items-center gap-2 border-t border-line bg-paper/40 px-7 py-3.5 max-md:flex-wrap max-md:px-5">{children}</div>
 }
 
 function Define() {
@@ -99,7 +99,7 @@ function Define() {
   return (
     <>
       <StepHeader title="Define the rule" />
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_260px] gap-6 overflow-y-auto px-7 pb-6">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_260px] gap-6 overflow-y-auto px-7 pb-6 max-md:grid-cols-1 max-md:px-5">
         <div className="flex flex-col gap-5">
           <Field className="flex flex-col gap-1.5">
             <FieldLabel className={fieldLabel}>Rule name</FieldLabel>
@@ -178,7 +178,7 @@ function Impact() {
   return (
     <>
       <StepHeader title="Here's what this rule reaches" />
-      <div className="min-h-0 flex-1 overflow-y-auto px-7 pb-6">
+      <div className="min-h-0 flex-1 overflow-y-auto px-7 pb-6 max-md:px-5">
         <p className="mb-6 max-w-[56ch] text-body leading-relaxed text-ink-2">
           This rule changes <strong className="font-semibold text-ink">{components.length} components</strong> in{" "}
           <strong className="font-semibold text-ink">{everywhere ? "3 projects" : "1 project"}</strong> and reaches{" "}
@@ -192,7 +192,7 @@ function Impact() {
           <div className="flex gap-3 bg-ok-soft px-3.5 py-1.5 text-ok"><span className="w-2">+</span><span className="min-w-0">why: {flow.why}</span></div>
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_240px] gap-5">
+        <div className="grid grid-cols-[minmax(0,1fr)_240px] gap-5 max-md:grid-cols-1">
           <div>
             <h3 className="section-label mb-2">Components that change</h3>
             <div className="flex flex-wrap gap-1.5">
@@ -237,7 +237,7 @@ function Impact() {
         <Button variant="ghost" onClick={() => dispatch({ type: "updateFlow", patch: { step: "define" } })}>
           <ArrowLeftIcon /> Back
         </Button>
-        <span className="ml-auto text-caption text-muted">You can revert this from History at any time.</span>
+        <span className="ml-auto text-caption text-muted max-md:order-first max-md:ml-0 max-md:w-full">You can revert this from History at any time.</span>
         <Button
           variant="primary"
           data-agent-confirm={`Publishes "${flow.name}" to ${SYSTEM_NAME} and every connected AI tool`}
@@ -291,7 +291,7 @@ function Publish() {
   return (
     <>
       <StepHeader title={finished ? `${SYSTEM_NAME} v${target} is live` : "Sending your rule to every tool"} />
-      <div className="min-h-0 flex-1 px-7 pb-6">
+      <div className="min-h-0 flex-1 px-7 pb-6 max-md:px-5">
         <Progress value={pct} aria-label="Publishing progress" className="mb-6">
           <ProgressTrack className="h-1 overflow-hidden rounded-full bg-paper-2">
             <ProgressIndicator className="h-full w-(--progress-value) rounded-full bg-ink transition-[width] duration-500" />

@@ -10,6 +10,7 @@ import { SYSTEM_NAME, impactComponents, screens, toolName, type Confidence as Co
 import { useIssueActions } from "@/actions"
 import { useStore } from "@/store"
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/lib/use-mobile"
 import { AllowModal, WrongModal } from "@/screens/review-modals"
 
 export const STATUS: Record<Issue["status"], { label: string; tone: "neutral" | "ok" }> = {
@@ -58,13 +59,15 @@ export function Review() {
   const selected = issues.find((i) => i.id === state.selectedIssueId) ?? null
   const openCount = issues.filter((i) => i.status === "open").length
   const run = useCheckRun(issues)
+  // On a phone the canvas sits above the inspector instead of beside it.
+  const mobile = useIsMobile()
 
   return (
     <div className="flex h-full flex-col">
       <h1 className="sr-only">Review {screen.name}</h1>
-      <Resizable className="min-h-0 flex-1">
-        <ResizablePanel minSize={40} className="relative flex flex-col canvas-grid">
-          <FitToCanvas>
+      <Resizable key={mobile ? "stacked" : "side"} orientation={mobile ? "vertical" : "horizontal"} className="min-h-0 flex-1">
+        <ResizablePanel minSize={mobile ? 25 : 40} className="relative flex flex-col canvas-grid">
+          <FitToCanvas fitWidth={mobile}>
             <CheckoutMock issues={state.issues} selectedId={state.selectedIssueId} onPin={(id) => dispatch({ type: "select", issueId: id })} />
             <Sweep key={run} />
           </FitToCanvas>
@@ -73,10 +76,15 @@ export function Review() {
 
         <ResizableHandle
           aria-label="Resize inspector"
-          className="relative w-px bg-line outline-none after:absolute after:inset-y-0 after:-left-1 after:w-2 after:content-[''] data-dragging:bg-ink data-hovering:bg-edge"
-        />
+          className={cn(
+            "relative bg-line outline-none after:absolute after:content-[''] data-dragging:bg-ink data-hovering:bg-edge",
+            mobile ? "h-px after:inset-x-0 after:-top-2 after:h-4" : "w-px after:inset-y-0 after:-left-1 after:w-2"
+          )}
+        >
+          {mobile && <span aria-hidden="true" className="absolute top-1/2 left-1/2 h-1 w-9 -translate-1/2 rounded-full bg-line-strong" />}
+        </ResizableHandle>
 
-        <ResizablePanel defaultSize={38} minSize={32} maxSize={50} className="flex flex-col bg-surface">
+        <ResizablePanel defaultSize={mobile ? 50 : 38} minSize={mobile ? 25 : 32} maxSize={mobile ? 75 : 50} className="flex flex-col bg-surface">
           <Tabs defaultValue="flags" className="flex min-h-0 flex-1 flex-col">
             <TabsList aria-label="Inspector" className="relative flex h-10 shrink-0 items-stretch gap-6 border-b border-line px-5">
               <TabsTab value="flags" className="flex cursor-pointer items-center gap-1.5 text-ui font-medium text-muted outline-none hover:text-ink data-selected:text-ink">
@@ -154,7 +162,7 @@ export function Review() {
       </Resizable>
 
       <DecisionBar issue={selected} index={selected ? issues.indexOf(selected) : -1} screen={screen} />
-      <StatusBar screen={screen} openCount={openCount} />
+      {!mobile && <StatusBar screen={screen} openCount={openCount} />}
 
       <AllowModal />
       <WrongModal />
@@ -165,8 +173,9 @@ export function Review() {
 /**
  * Shows the screen at its real width (420px) and scales it down, never up, so the whole screen
  * fits the canvas at any window size. The zoom level sits in the corner, the way a design tool shows it.
+ * With fitWidth (on a phone) it only fits the width and the canvas scrolls, so the pins stay big enough to tap.
  */
-function FitToCanvas({ children }: { children: React.ReactNode }) {
+function FitToCanvas({ children, fitWidth }: { children: React.ReactNode; fitWidth?: boolean }) {
   const outer = React.useRef<HTMLDivElement>(null)
   const inner = React.useRef<HTMLDivElement>(null)
   const [fit, setFit] = React.useState({ scale: 1, w: 0, h: 0 })
@@ -176,10 +185,11 @@ function FitToCanvas({ children }: { children: React.ReactNode }) {
     const i = inner.current
     if (!o || !i) return
     const measure = () => {
-      const pad = 44
+      const pad = fitWidth ? 16 : 44
       const w = i.offsetWidth
       const h = i.offsetHeight
-      const scale = Math.min(1, (o.clientWidth - pad * 2) / w, (o.clientHeight - pad * 2) / h)
+      const byWidth = (o.clientWidth - pad * 2) / w
+      const scale = fitWidth ? Math.min(1, byWidth) : Math.min(1, byWidth, (o.clientHeight - pad * 2) / h)
       setFit({ scale: Math.max(0.4, scale), w, h })
     }
     const ro = new ResizeObserver(measure)
@@ -187,16 +197,16 @@ function FitToCanvas({ children }: { children: React.ReactNode }) {
     ro.observe(i)
     measure()
     return () => ro.disconnect()
-  }, [])
+  }, [fitWidth])
 
   return (
-    <div ref={outer} className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+    <div ref={outer} className={cn("relative flex min-h-0 flex-1 justify-center", fitWidth ? "items-start overflow-y-auto py-4" : "items-center overflow-hidden")}>
       <div className="relative shrink-0" style={fit.w ? { width: fit.w * fit.scale, height: fit.h * fit.scale } : undefined}>
         <div ref={inner} className="absolute top-0 left-0 w-[420px] origin-top-left" style={{ transform: `scale(${fit.scale})` }}>
           {children}
         </div>
       </div>
-      <span className="absolute right-3 bottom-3 flex h-6 items-center rounded-md bg-surface/90 px-2 font-mono text-micro text-muted shadow-panel tabular-nums">
+      <span className="absolute right-3 bottom-3 flex h-6 max-md:hidden items-center rounded-md bg-surface/90 px-2 font-mono text-micro text-muted shadow-panel tabular-nums">
         {fit.scale < 1 ? `Fit, ${Math.round(fit.scale * 100)}%` : "100%"}
       </span>
     </div>
@@ -374,7 +384,7 @@ function DecisionBar({ issue, index, screen }: { issue: Issue | null; index: num
       wrong: "Dismissed. Plumb won't raise this flag again.",
     }
     return (
-      <div className="flex min-h-[60px] shrink-0 items-center gap-4 border-t border-line bg-surface px-5 py-2.5">
+      <div className="flex min-h-[60px] shrink-0 items-center gap-4 border-t border-line bg-surface px-5 py-2.5 max-md:flex-wrap max-md:gap-3 max-md:px-4">
         <span
           aria-hidden="true"
           className={cn(
@@ -384,21 +394,21 @@ function DecisionBar({ issue, index, screen }: { issue: Issue | null; index: num
         >
           {STATUS[issue.status].tone === "ok" ? <CheckIcon className="size-4" strokeWidth={2.5} /> : <MinusIcon className="size-4" strokeWidth={2.5} />}
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 max-md:basis-[calc(100%-48px)]">
           <div className="truncate font-medium">
             {issue.title}: {STATUS[issue.status].label.toLowerCase()}
           </div>
           <div className="mt-0.5 truncate text-caption text-muted">{after[issue.status as Exclude<Issue["status"], "open">]}</div>
         </div>
-        <Button variant="ghost" onClick={() => dispatch({ type: "setStatus", issueId: issue.id, status: "open" })}>
+        <Button variant="ghost" className="max-md:order-1 max-md:flex-1" onClick={() => dispatch({ type: "setStatus", issueId: issue.id, status: "open" })}>
           <RotateCcwIcon /> Reopen flag
         </Button>
         {nextOpen ? (
-          <Button onClick={() => dispatch({ type: "select", issueId: nextOpen.id })}>
+          <Button className="max-md:order-1 max-md:flex-1" onClick={() => dispatch({ type: "select", issueId: nextOpen.id })}>
             Next open flag <ArrowRightIcon />
           </Button>
         ) : (
-          <Button variant="primary" onClick={() => dispatch({ type: "go", view: "inbox" })}>
+          <Button variant="primary" className="max-md:order-1 max-md:flex-1" onClick={() => dispatch({ type: "go", view: "inbox" })}>
             Back to Inbox <ArrowRightIcon />
           </Button>
         )}
@@ -407,21 +417,21 @@ function DecisionBar({ issue, index, screen }: { issue: Issue | null; index: num
   }
 
   return (
-    <div className="flex min-h-[60px] shrink-0 items-center gap-4 border-t border-line bg-surface px-5 py-2.5">
+    <div className="flex min-h-[60px] shrink-0 items-center gap-4 border-t border-line bg-surface px-5 py-2.5 max-md:flex-wrap max-md:gap-x-3 max-md:gap-y-2.5 max-md:px-4">
       <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-ink font-mono text-ui font-medium text-paper">
         {index + 1}
       </span>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 max-md:basis-[calc(100%-48px)]">
         <div className="truncate font-medium">What should happen to “{issue.title}”?</div>
-        <div className="mt-0.5 line-clamp-2 text-caption leading-snug text-muted">
+        <div className="mt-0.5 line-clamp-2 text-caption leading-snug text-muted max-md:hidden">
           Fix sends {tool} a corrected version. Allow keeps it on {screen.name} only. A rule makes it your new standard.
         </div>
       </div>
-      <Button variant="ghost" className="text-muted" onClick={() => dispatch({ type: "modal", modal: "wrong" })}>
+      <Button variant="ghost" className="text-muted max-md:order-2 max-md:h-7 max-md:w-full" onClick={() => dispatch({ type: "modal", modal: "wrong" })}>
         <FlagIcon /> Report a wrong flag
       </Button>
-      <span className="h-6 w-px shrink-0 bg-line" aria-hidden="true" />
-      <div className="flex shrink-0 gap-2">
+      <span className="h-6 w-px shrink-0 bg-line max-md:hidden" aria-hidden="true" />
+      <div className="flex shrink-0 gap-2 max-md:order-1 max-md:grid max-md:w-full max-md:grid-cols-3 max-md:[&_button]:px-1 max-md:[&_svg]:hidden">
         <Hint label={`Send ${tool} a fix that follows your rule`} side="top">
           <Button onClick={() => actions.fix(issue.id)}>
             <WrenchIcon /> Fix to match

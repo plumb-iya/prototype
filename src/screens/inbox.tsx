@@ -52,7 +52,7 @@ export function Inbox() {
 
       {waiting.length > 0 && (
         <section aria-labelledby="waiting-title" className="mt-8 overflow-hidden rounded-xl bg-surface shadow-panel-lift">
-          <div className="flex items-center justify-between gap-3 px-5 py-3">
+          <div className="flex items-center justify-between gap-3 px-5 py-3 max-md:px-4">
             <h2 id="waiting-title" className="flex items-center gap-3.5 font-medium">
               {/* The dot sits in a column as wide as the tiles below, so the heading lines up with their titles. */}
               <span aria-hidden="true" className="grid w-9 place-items-center">
@@ -65,7 +65,7 @@ export function Inbox() {
             </span>
           </div>
           {waiting.map(({ s, flags }, i) => (
-            <div key={s.id} className="flex items-center gap-3.5 border-t border-line px-5 py-3.5">
+            <div key={s.id} className="flex items-center gap-3.5 border-t border-line px-5 py-3.5 max-md:gap-3 max-md:px-4">
               <ToolTile id={s.tool} className="size-9 text-ui" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ export function Inbox() {
       )}
 
       <section aria-labelledby="all-title" className="mt-10">
-        <div className="mb-3 flex items-center justify-between gap-4">
+        <div className="mb-3 flex items-center justify-between gap-4 max-md:flex-col max-md:items-start max-md:gap-2.5">
           <h2 id="all-title" className="section-label">
             All screens
           </h2>
@@ -125,11 +125,11 @@ function Stats({ openFlags, screensWithFlags }: { openFlags: number; screensWith
   const checked = screens.filter((s) => state.tools.find((t) => t.id === s.tool)?.connected || s.state !== "error")
   const elements = checked.reduce((n, s) => n + s.elementsChecked, 0)
 
-  const tile = "flex min-h-[118px] flex-col justify-between rounded-xl p-4"
+  const tile = "flex min-h-[118px] min-w-0 flex-col justify-between rounded-xl p-4 max-md:min-h-[100px] max-md:p-3.5"
   const value = "font-display text-[34px] leading-none font-bold tracking-[-0.03em] tabular-nums"
 
   return (
-    <dl className="grid grid-cols-4 gap-3">
+    <dl className="grid grid-cols-4 gap-3 max-md:grid-cols-2 max-md:gap-2">
       <div className={cn(tile, "relative bg-ink text-paper shadow-panel-lift")}>
         <dt className="section-label text-paper/60">Open flags</dt>
         <dd>
@@ -176,7 +176,7 @@ function Row({ s, flags, kind, first, onOpen }: { s: Screen; flags: number; kind
   const { dispatch } = useStore()
   const isNew = s.receivedAgo === "2 min ago"
   return (
-    <div className={cn("group relative flex min-h-[64px] items-center gap-4 px-4 py-3 transition-colors hover:bg-paper/50", !first && "border-t border-line")}>
+    <div className={cn("group relative flex min-h-[64px] items-center gap-4 px-4 py-3 transition-colors hover:bg-paper/50 max-md:gap-3", !first && "border-t border-line")}>
       <ToolTile id={s.tool} className="size-9 text-ui" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
@@ -195,11 +195,11 @@ function Row({ s, flags, kind, first, onOpen }: { s: Screen; flags: number; kind
           <span className="shrink-0 text-caption text-muted">
             {s.author} in {toolName(s.tool)}
           </span>
-          <span className="truncate font-mono text-micro text-faint">{s.file}</span>
+          <span className="truncate font-mono text-micro text-faint max-md:hidden">{s.file}</span>
         </div>
       </div>
-      <span className="w-20 shrink-0 text-right text-caption whitespace-nowrap text-muted">{s.receivedAgo}</span>
-      <span className="w-36 shrink-0">
+      <span className="w-20 shrink-0 text-right text-caption whitespace-nowrap text-muted max-md:hidden">{s.receivedAgo}</span>
+      <span className="w-36 shrink-0 max-md:w-auto">
         {kind === "flagged" && (
           <Badge tone="drift" dot>
             {flags} {flags === 1 ? "flag" : "flags"}
@@ -216,7 +216,7 @@ function Row({ s, flags, kind, first, onOpen }: { s: Screen; flags: number; kind
           </Badge>
         )}
       </span>
-      <span className="relative z-10 flex w-24 shrink-0 justify-end">
+      <span className="relative z-10 flex w-24 shrink-0 justify-end max-md:hidden">
         {kind === "error" && (
           <Button size="sm" onClick={() => dispatch({ type: "go", view: "tools" })}>
             Reconnect

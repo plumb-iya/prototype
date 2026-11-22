@@ -1,4 +1,3 @@
-import * as React from "react"
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@ui-sdk/react/popover"
 import { CheckIcon, ChevronDownIcon, CompassIcon, RotateCcwIcon, XIcon } from "lucide-react"
 import { Button, buttonClass, Modal } from "@/components/ui"
@@ -69,22 +68,24 @@ export function GuideBar() {
   const current = steps[nextIdx]
 
   return (
-    <section aria-label="Walkthrough" className="flex h-8 min-w-0 items-center gap-3 rounded-full bg-surface pr-1 pl-3.5 shadow-panel">
+    <section aria-label="Walkthrough" className="flex h-8 min-w-0 items-center gap-3 rounded-full bg-surface pr-1 pl-3.5 shadow-panel max-md:h-auto max-md:min-h-9 max-md:gap-2 max-md:rounded-2xl max-md:py-1 max-md:pl-3">
       <CompassIcon className="size-4 shrink-0 text-ink" aria-hidden="true" />
-      <Progress steps={steps} current={nextIdx} />
-      <p className="min-w-0 flex-1 truncate">
+      <span className="max-md:hidden">
+        <Progress steps={steps} current={nextIdx} />
+      </span>
+      <p className="min-w-0 flex-1 truncate max-md:line-clamp-2 max-md:whitespace-normal max-md:leading-snug">
         {finished ? (
           <span className="font-medium text-ok">You finished the walkthrough. Thanks for trying Plumb.</span>
         ) : (
           <>
             <span className="font-medium">Step {nextIdx + 1} of {steps.length}: {current.title}.</span>{" "}
-            <span className="text-muted">{current.hint}</span>
+            <span className="text-muted max-md:hidden">{current.hint}</span>
           </>
         )}
       </p>
       <Popover>
         <PopoverTrigger className={buttonClass("ghost", "sm", "shrink-0 rounded-full text-muted data-open:bg-paper-2 data-open:text-ink")}>
-          All steps <span className="font-mono text-micro tabular-nums">{doneCount}/{steps.length}</span>
+          <span className="max-md:hidden">All steps</span> <span className="font-mono text-micro tabular-nums">{doneCount}/{steps.length}</span>
           <ChevronDownIcon />
         </PopoverTrigger>
         <PopoverContent
@@ -145,32 +146,5 @@ export function GuideIntro() {
         </Button>
       </div>
     </Modal>
-  )
-}
-
-export function useIsSmallScreen() {
-  const query = "(max-width: 1023px)"
-  const [small, setSmall] = React.useState(() => typeof window !== "undefined" && window.matchMedia(query).matches)
-  React.useEffect(() => {
-    const mq = window.matchMedia(query)
-    const on = () => setSmall(mq.matches)
-    mq.addEventListener("change", on)
-    return () => mq.removeEventListener("change", on)
-  }, [])
-  return small
-}
-
-export function SmallScreenNotice({ onContinue }: { onContinue: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-paper p-6">
-      <div className="max-w-sm text-center">
-        <PlumbTile size={64} className="mx-auto mb-5" />
-        <h1 className="font-display text-title font-bold tracking-[-0.01em]">Plumb is a desktop app</h1>
-        <p className="mt-2 leading-relaxed text-muted">Designers review drift at their desk, next to the tools that make it. Open this link on a laptop for the full walkthrough.</p>
-        <Button variant="secondary" className="mt-6" onClick={onContinue}>
-          Continue anyway
-        </Button>
-      </div>
-    </div>
   )
 }

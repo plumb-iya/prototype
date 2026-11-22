@@ -25,9 +25,9 @@
 }
 
 @theme inline {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", "Inter", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
 
   --color-paper: var(--paper);
   --color-paper-2: var(--paper-2);
@@ -74,9 +74,12 @@
   #root {
     height: 100%;
   }
+  /* On phones, fit the visible area so browser bars don't cover the tab bar. */
+  #root {
+    height: 100dvh;
+  }
   body {
     @apply bg-desk font-sans text-ui text-ink antialiased;
-    font-feature-settings: "cv11", "ss01";
   }
   ::selection {
     background: var(--drift-soft);
@@ -122,7 +125,7 @@
   position: fixed;
   left: var(--toast-left, 88px);
   bottom: var(--toast-bottom, 28px);
-  width: 360px;
+  width: min(360px, calc(100vw - 24px));
   height: var(--toast-front-height);
   transition: opacity 150ms ease;
 }

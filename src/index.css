@@ -1,0 +1,212 @@
+@layer ui-sdk;
+
+@import "tailwindcss";
+
+:root {
+  --paper: #f4f1ea;
+  --paper-2: #ebe5db;
+  --surface: #ffffff;
+  --ink: #12141a;
+  --ink-2: #2a2c33;
+  --muted: #5c5e66;
+  --faint: #676a72;
+  --edge: #8f897b;
+  --line: #e2ddd2;
+  --line-strong: #d1ccbf;
+  --drift: #ff5a36;
+  --drift-soft: #ffe8e0;
+  --drift-ink: #a3300f;
+  --ok: #24704a;
+  --ok-soft: #e1f0e6;
+  --brand: #404dd1;
+  --off-brand: #1a6fe3;
+  /* The surface the app window sits on. Prototype scaffolding lives here, outside the app. */
+  --desk: #dcd6ca;
+}
+
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-edge: var(--edge);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-drift: var(--drift);
+  --color-drift-soft: var(--drift-soft);
+  --color-drift-ink: var(--drift-ink);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-brand: var(--brand);
+  --color-off-brand: var(--off-brand);
+  --color-desk: var(--desk);
+
+  /* One type scale for the whole interface. The checkout screen being reviewed keeps its own. */
+  --text-micro: 11px;
+  --text-small: 12px;
+  --text-caption: 12.5px;
+  --text-ui: 13.5px;
+  --text-body: 14.5px;
+  --text-heading: 16px;
+  --text-title: 20px;
+  --text-display: 28px;
+
+  --shadow-pop: 0 1px 2px rgb(18 20 26 / 0.06), 0 8px 24px -6px rgb(18 20 26 / 0.18);
+  --shadow-sheet: 0 24px 64px -12px rgb(18 20 26 / 0.35);
+
+  /* Panels are drawn with a soft ring instead of a border, so they read as objects on the paper. */
+  --shadow-hairline: inset 0 0 0 1px var(--line);
+  --shadow-panel: 0 0 0 1px rgb(18 20 26 / 0.07), 0 1px 2px rgb(18 20 26 / 0.04);
+  --shadow-panel-lift: 0 0 0 1px rgb(18 20 26 / 0.08), 0 1px 2px rgb(18 20 26 / 0.05), 0 10px 24px -16px rgb(18 20 26 / 0.22);
+  --shadow-window: 0 0 0 1px rgb(18 20 26 / 0.1), 0 2px 4px rgb(18 20 26 / 0.06), 0 28px 60px -24px rgb(18 20 26 / 0.4);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-desk font-sans text-ui text-ink antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  ::selection {
+    background: var(--drift-soft);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+}
+
+/* The deck's system-data label: mono, uppercase, tracked. "WHY IT WAS FLAGGED", "THIS SCREEN". */
+@utility section-label {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The same label in the accent, for the one line that says what was detected. drift-ink keeps small text readable on paper. */
+@utility kicker {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--drift-ink);
+}
+
+@utility canvas-grid {
+  background-color: var(--paper);
+  background-image: radial-gradient(circle, rgb(18 20 26 / 0.09) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Toast stack, from the ui-sdk Toast styling guide */
+/* Toasts sit at the bottom left of the work area: above the decision bar on Review, beside the
+   sidebar elsewhere. The shell sets --toast-left and --toast-bottom. */
+[data-slot="toast-region"] {
+  position: fixed;
+  left: var(--toast-left, 88px);
+  bottom: var(--toast-bottom, 28px);
+  width: 360px;
+  height: var(--toast-front-height);
+  transition: opacity 150ms ease;
+}
+/* The region lives in the browser's top layer, where z-index doesn't apply, so it would draw over a
+   dialog's backdrop. While a modal is open the toasts step aside, and come back when it closes. */
+body:has([aria-modal="true"][data-open]) [data-slot="toast-region"] {
+  opacity: 0;
+  pointer-events: none;
+}
+[data-slot="toast-region"][data-expanded] {
+  height: calc(var(--toast-stack-height) + (var(--toast-count) - 1) * 8px);
+}
+[data-slot="toast"] {
+  --y: calc(var(--toast-index) * -8px);
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: calc(100 - var(--toast-index));
+  overflow: hidden;
+  height: var(--toast-height);
+  translate: var(--toast-swipe-x, 0px) calc(var(--y) + var(--toast-swipe-y, 0px));
+  scale: calc(1 - var(--toast-index) * 0.04);
+  /* Cards behind the front one peek out above it. */
+  transform-origin: top center;
+  transition-property: translate, scale, opacity, height;
+  transition-duration: 350ms;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  user-select: none;
+}
+[data-slot="toast"]:not([data-front], [data-expanded]) {
+  height: var(--toast-front-height);
+}
+[data-slot="toast"][data-expanded] {
+  --y: calc(-1 * (var(--toast-offset) + var(--toast-index) * 8px));
+  scale: 1;
+}
+[data-slot="toast"][data-starting-style] {
+  transition: none;
+}
+[data-slot="toast"][data-starting-style][data-front] {
+  --y: 16px;
+  opacity: 0;
+}
+[data-slot="toast"]:is([data-starting-style]:not([data-front]), [data-ending-style]) {
+  opacity: 0;
+}
+[data-slot="toast"][data-swiping] {
+  transition: none;
+}
+[data-slot="segmented-control-indicator"] {
+  position: absolute;
+  left: var(--segmented-control-indicator-left);
+  top: var(--segmented-control-indicator-top);
+  width: var(--segmented-control-indicator-width);
+  height: var(--segmented-control-indicator-height);
+  transition: left 200ms cubic-bezier(0.2, 0.8, 0.2, 1), width 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Signature: when Plumb checks a screen, a level line with the plumb bob sweeps down it. */
+@keyframes plumb-sweep {
+  0% { top: -2%; opacity: 0; }
+  8% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+.plumb-sweep {
+  animation: plumb-sweep 1300ms cubic-bezier(0.45, 0, 0.25, 1) forwards;
+}
+@keyframes plumb-chip {
+  0% { opacity: 0; translate: 0 -4px; }
+  12%, 82% { opacity: 1; translate: 0 0; }
+  100% { opacity: 0; translate: 0 -4px; }
+}
+.plumb-chip {
+  animation: plumb-chip 1700ms ease forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plumb-sweep {
+    animation: none;
+    opacity: 0;
+  }
+  [data-slot="toast"],
+  [data-slot="segmented-control-indicator"] {
+    transition-property: opacity;
+  }
+}

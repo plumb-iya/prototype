@@ -152,14 +152,14 @@ export function Segmented<T extends string>({
       aria-label={label}
       value={value}
       onValueChange={(v) => v && onChange(v as T)}
-      className="relative inline-flex h-8 items-center rounded-lg bg-paper-2/80 p-0.5"
+      className="relative inline-flex h-8 max-w-full items-center overflow-x-auto rounded-lg bg-paper-2/80 p-0.5 [scrollbar-width:none]"
     >
       <SegmentedControlIndicator className="rounded-md bg-surface shadow-[0_1px_2px_rgb(18_20_26/0.12)]" />
       {options.map((o) => (
         <SegmentedControlItem
           key={o.value}
           value={o.value}
-          className="relative z-10 flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-3 text-ui font-medium text-muted transition-colors hover:text-ink data-checked:text-ink"
+          className="relative z-10 flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-3 text-ui font-medium text-muted transition-colors hover:text-ink data-checked:text-ink"
         >
           {o.label}
           {o.count !== undefined && <span className="text-small text-muted tabular-nums">{o.count}</span>}

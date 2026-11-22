@@ -3,8 +3,7 @@ import { XIcon } from "lucide-react"
 import { Shell } from "@/components/shell"
 import { Frame } from "@/components/frame"
 import { RuleFlow } from "@/components/rule-flow"
-import * as React from "react"
-import { GuideIntro, SmallScreenNotice, useIsSmallScreen } from "@/components/guide"
+import { GuideIntro } from "@/components/guide"
 import { StoreProvider, useStore, type View } from "@/store"
 import { Inbox } from "@/screens/inbox"
 import { Review } from "@/screens/review"
@@ -40,13 +39,6 @@ export function Toasts() {
   )
 }
 
-function Welcome() {
-  const small = useIsSmallScreen()
-  const [continued, setContinued] = React.useState(false)
-  if (small && !continued) return <SmallScreenNotice onContinue={() => setContinued(true)} />
-  return <GuideIntro />
-}
-
 export default function App({ initialView }: { initialView?: View }) {
   return (
     <StoreProvider initialView={initialView}>
@@ -56,7 +48,7 @@ export default function App({ initialView }: { initialView?: View }) {
         </Shell>
       </Frame>
       <RuleFlow />
-      {!initialView && <Welcome />}
+      {!initialView && <GuideIntro />}
       <Toasts />
     </StoreProvider>
   )

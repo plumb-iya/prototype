@@ -65,7 +65,7 @@ UI SDK lets an AI agent read and operate the interface through the same componen
 - React 19, Vite, TypeScript
 - `@ui-sdk/react` + `@ui-sdk/core` (headless behaviors: focus, keyboard, ARIA, popups)
 - Tailwind CSS v4 for all styling. `src/components/ui.tsx` holds the styled wrappers, `src/index.css` the Plumb tokens and the toast stack CSS
-- Fonts: Space Grotesk, Inter, IBM Plex Mono (Fontsource)
+- Fonts: Geist and Geist Mono (Fontsource, variable)
 
 UI SDK ships its docs inside the package: start at `node_modules/@ui-sdk/react/docs/llms.txt`.
 

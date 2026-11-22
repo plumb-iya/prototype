@@ -11,7 +11,7 @@ Plumb is a desktop app prototype for IDSN 523 (USC). It catches drift between a 
 | Components | `@ui-sdk/react` + `@ui-sdk/core` (Vercel UI SDK, beta) | Headless: behavior, focus, keyboard and ARIA. No styles of its own |
 | Styling | Tailwind CSS v4 | Configured in CSS (`src/index.css`), not in a JS config file |
 | Icons | `lucide-react` | |
-| Fonts | Fontsource, bundled (no Google Fonts) | Space Grotesk, Inter, IBM Plex Mono |
+| Fonts | Fontsource, bundled (no Google Fonts) | Geist, Geist Mono (variable) |
 | Tests | Vitest + jsdom + Testing Library | `src/test/` |
 | Lint | oxlint | `.oxlintrc.json` |
 
@@ -27,9 +27,9 @@ npm test          # agent tests
 npm run lint      # oxlint
 ```
 
-Before you push: `npm run build`, `npm test` and `npm run lint` must all pass. Lint currently reports 13 warnings that were already there; don't add new ones.
+Before you push: `npm run build`, `npm test` and `npm run lint` must all pass. Lint currently reports 12 warnings that were already there; don't add new ones.
 
-The app is desktop only, 1180px wide or more. Check changes at 1440×900 and at 1280×720 (a small laptop).
+The app is built for desktop (1180px and wider), with a phone layout below 768px: a bottom tab bar instead of the sidebar (on every view, Review included), and Review stacks the canvas above the inspector. Use `max-md:` classes for phone-only styles and `useIsMobile()` from `src/lib/use-mobile.ts` when the markup itself has to change. Check changes at 1440×900, at 1280×720 (a small laptop) and at 375×812 (a phone).
 
 ## Where things live
 
@@ -79,7 +79,7 @@ src/
 These come from our FP1 deck (Nov 18). Keep the prototype matching it.
 
 - **Paper, black and white, plus one accent.** Coral (`drift`) means drift and nothing else: the pins on the canvas, the "Drift detected" kicker, open-flag dots. Don't use it for buttons, links or decoration. Green (`ok`) is only for resolved or healthy states.
-- **Type:** Space Grotesk (`font-display`) for headings, Inter for the interface, IBM Plex Mono (`font-mono`, `section-label`) for system data: file paths, versions, counts, labels.
+- **Type:** Geist for headings (`font-display`) and the interface, Geist Mono (`font-mono`, `section-label`) for system data: file paths, versions, counts, labels.
 - **One primary (black) button per view.** Plumb's own design-system rule; the prototype follows it too.
 - **Status is a dot plus words**, not a filled pill (`<Badge tone="…" dot>`).
 - **Decisions stay neutral.** On Review, "Fix to match", "Allow here" and "Make it a rule" look the same on purpose, so we don't nudge test participants toward one.

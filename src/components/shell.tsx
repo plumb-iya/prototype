@@ -1,6 +1,6 @@
 import * as React from "react"
 import { BookOpenIcon, ChevronRightIcon, HistoryIcon, InboxIcon, PanelLeftIcon, PlugIcon, SearchIcon } from "lucide-react"
-import { Button, Hint } from "@/components/ui"
+import { Button, buttonClass, Hint } from "@/components/ui"
 import { CommandPalette } from "@/components/command-palette"
 import { TrafficLights } from "@/components/frame"
 import { SYSTEM_NAME, screens, toolName } from "@/data"
@@ -8,6 +8,7 @@ import { PlumbTile, ToolTile } from "@/components/brand"
 export { PlumbMark, PlumbTile, ToolTile } from "@/components/brand"
 import { useStore, type View } from "@/store"
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/lib/use-mobile"
 
 const NAV: { id: View; label: string; icon: React.ElementType; match: View[] }[] = [
   { id: "inbox", label: "Inbox", icon: InboxIcon, match: ["inbox", "review"] },
@@ -26,6 +27,7 @@ const ME = { name: "Amber", initial: "A", role: "Designer" }
  */
 export function Shell({ children }: { children: React.ReactNode }) {
   const { state } = useStore()
+  const mobile = useIsMobile()
   const [railOnReview, setRailOnReview] = React.useState(true)
   const [railElsewhere, setRailElsewhere] = React.useState(false)
   const onReview = state.view === "review"
@@ -33,11 +35,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const toggle = React.useCallback(() => (onReview ? setRailOnReview((v) => !v) : setRailElsewhere((v) => !v)), [onReview])
 
   // Tell the toast region where the work area is: beside the sidebar, and above the decision bar on Review.
+  // On a phone: above the tab bar, and above the decision bar too on Review.
   React.useLayoutEffect(() => {
     const root = document.documentElement.style
+    if (mobile) {
+      root.setProperty("--toast-left", "12px")
+      root.setProperty("--toast-bottom", `${56 + (onReview ? 120 : 0) + 12}px`)
+      return
+    }
     root.setProperty("--toast-left", `${12 + (collapsed ? 60 : 228) + 16}px`)
     root.setProperty("--toast-bottom", `${12 + (onReview ? 28 + 60 : 0) + 16}px`)
-  }, [collapsed, onReview])
+  }, [collapsed, onReview, mobile])
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -50,6 +58,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey)
   }, [toggle])
 
+  if (mobile) {
+    return (
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Toolbar collapsed onToggle={toggle} mobile />
+        <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+        <TabBar />
+      </div>
+    )
+  }
+
   return (
     <>
       <Sidebar collapsed={collapsed} />
@@ -58,6 +76,52 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </div>
     </>
+  )
+}
+
+/** Opening the palette counts toward the walkthrough's last step. */
+function usePalette() {
+  const { state, dispatch } = useStore()
+  const [open, setOpen] = React.useState(false)
+  const onOpenChange = (o: boolean) => {
+    setOpen(o)
+    if (o && !state.guide.usedPalette) dispatch({ type: "guide", patch: { usedPalette: true } })
+  }
+  return { open, onOpenChange }
+}
+
+/** On a phone the sidebar becomes a tab bar along the bottom, with the same four places. */
+function TabBar() {
+  const { state, dispatch } = useStore()
+  const { open, offline } = useCounts()
+  return (
+    <nav aria-label="Main" className="grid shrink-0 grid-cols-4 border-t border-line bg-paper-2 pb-[env(safe-area-inset-bottom)]">
+      {NAV.map((n) => {
+        const active = n.match.includes(state.view)
+        const label = n.id === "inbox" && open > 0 ? `${n.label}, ${open} open ${open === 1 ? "flag" : "flags"}` : n.id === "tools" && offline.length ? `${n.label}, ${offline.length} offline` : undefined
+        return (
+          <button
+            key={n.id}
+            type="button"
+            aria-label={label}
+            aria-current={active ? "page" : undefined}
+            onClick={() => dispatch({ type: "go", view: n.id })}
+            className={cn("flex h-14 cursor-pointer flex-col items-center justify-center gap-1 text-micro font-medium outline-none", active ? "text-ink" : "text-muted")}
+          >
+            <span className="relative">
+              <n.icon className="size-5" strokeWidth={active ? 2 : 1.75} aria-hidden="true" />
+              {n.id === "inbox" && open > 0 && (
+                <span aria-hidden="true" className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ink px-1 font-mono text-micro text-paper tabular-nums ring-2 ring-paper-2">
+                  {open}
+                </span>
+              )}
+              {n.id === "tools" && offline.length > 0 && <span aria-hidden="true" className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-drift-ink ring-2 ring-paper-2" />}
+            </span>
+            {n.label}
+          </button>
+        )
+      })}
+    </nav>
   )
 }
 
@@ -71,11 +135,7 @@ function useCounts() {
 function Sidebar({ collapsed }: { collapsed: boolean }) {
   const { state, dispatch } = useStore()
   const { open, offline, rules, version, tools } = useCounts()
-  const [paletteOpen, setPaletteOpen] = React.useState(false)
-  const onPalette = (o: boolean) => {
-    setPaletteOpen(o)
-    if (o && !state.guide.usedPalette) dispatch({ type: "guide", patch: { usedPalette: true } })
-  }
+  const { open: paletteOpen, onOpenChange: onPalette } = usePalette()
 
   const meta = (id: View) => {
     if (id === "inbox" && open > 0)
@@ -216,19 +276,24 @@ function railButton(active: boolean) {
   )
 }
 
-function Toolbar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+function Toolbar({ collapsed, onToggle, mobile }: { collapsed: boolean; onToggle: () => void; mobile?: boolean }) {
   const { state, dispatch } = useStore()
+  const palette = usePalette()
   const screen = screens.find((s) => s.id === state.screenId) ?? screens[0]
   const openOnScreen = state.issues.filter((i) => i.screenId === screen.id && i.status === "open").length
   const review = state.view === "review"
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line px-4">
+    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line px-4 max-md:gap-2 max-md:px-3">
+      {mobile ? (
+        <PlumbTile size={24} label={`Plumb, ${SYSTEM_NAME}`} />
+      ) : (
       <Hint label={collapsed ? "Show sidebar  ⌘\\" : "Hide sidebar  ⌘\\"} side="bottom">
         <Button variant="ghost" size="icon" aria-label={collapsed ? "Show sidebar" : "Hide sidebar"} onClick={onToggle} className="-ml-1 size-7 text-muted">
           <PanelLeftIcon strokeWidth={1.75} />
         </Button>
       </Hint>
+      )}
       <span className="h-4 w-px shrink-0 bg-line-strong" aria-hidden="true" />
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5">
         {review ? (
@@ -253,12 +318,19 @@ function Toolbar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
           {openOnScreen ? `${openOnScreen} open ${openOnScreen === 1 ? "flag" : "flags"}` : "Matches your system"}
         </span>
       )}
-      {review && (
+      {review && !mobile && (
         <span className="ml-auto flex min-w-0 items-center gap-2 text-caption text-muted">
           <ToolTile id={screen.tool} className="size-6 text-micro" />
           <span className="truncate">
             Built by <span className="text-ink">{screen.author}</span> in <span className="text-ink">{toolName(screen.tool)}</span>, {screen.receivedAgo}
           </span>
+        </span>
+      )}
+      {mobile && (
+        <span className="ml-auto">
+          <CommandPalette open={palette.open} onOpenChange={palette.onOpenChange} shortcut={false} triggerLabel="Search or run a command" triggerClassName={buttonClass("ghost", "icon", "text-muted")}>
+            <SearchIcon strokeWidth={1.75} />
+          </CommandPalette>
         </span>
       )}
     </header>
@@ -280,8 +352,8 @@ export function Page({
 }) {
   return (
     <div className="h-full overflow-y-auto">
-      <div className={cn("px-10 pt-9 pb-20", width)}>
-        <div className="mb-7 flex items-end justify-between gap-6">
+      <div className={cn("px-10 pt-9 pb-20 max-md:px-4 max-md:pt-6 max-md:pb-10", width)}>
+        <div className="mb-7 flex items-end justify-between gap-6 max-md:mb-5 max-md:flex-col max-md:items-start max-md:gap-4">
           <div>
             <h1 className="font-display text-display leading-[1.1] font-bold tracking-[-0.025em]">{title}</h1>
             {description && <p className="mt-2 max-w-[62ch] text-body leading-relaxed text-muted">{description}</p>}

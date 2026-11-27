@@ -48,6 +48,15 @@ export interface Rule {
   isNew?: boolean
 }
 
+export type RuleScope = "checkout" | "everywhere"
+
+export interface RuleProposal {
+  name: string
+  category: Rule["category"]
+  baseline: string
+  value: string
+}
+
 export interface Version {
   version: number
   summary: string
@@ -147,6 +156,40 @@ export const initialRules: Rule[] = [
   { id: "type-scale", name: "Type scale", category: "Type", value: "24, 32, 40, 44 (Display)", why: "Display 44 was added for marketing and checkout heroes.", scope: "Everywhere", version: 14, author: "Amber" },
   { id: "content-pay", name: "Payment button label", category: "Content", value: "“Pay $amount”", why: "Showing the amount reduces checkout drop-off.", scope: "Checkout", version: 6, author: "Amber" },
 ]
+
+const proposalsByIssue = new Map<string, Omit<RuleProposal, "baseline"> & { everywhereValue?: string }>([
+  ["pill", { name: "Pill-shaped primary buttons", category: "Shape", value: "The Pay button may use a pill shape", everywhereValue: "Primary buttons may use a pill shape" }],
+  ["blue", { name: "Alternate color for primary actions", category: "Color", value: "Primary actions may also use #1A6FE3" }],
+  ["primary", { name: "Two primary buttons per view", category: "Components", value: "A view may have up to two primary buttons" }],
+  ["heading", { name: "44px for other headings", category: "Type", value: "Other headings may use 44px" }],
+  ["settings-toggle", { name: "Green for notification toggles", category: "Color", value: "Notification toggles may use #10B981 when on" }],
+  ["settings-spacing", { name: "18px form row spacing", category: "Components", value: "Form rows may be 18px apart" }],
+])
+
+export function getRuleProposal(issue: Issue, rules: Rule[], scope: RuleScope = "checkout"): RuleProposal | null {
+  const proposal = proposalsByIssue.get(issue.id)
+  if (!proposal) return null
+
+  // The injected spacing flag points at a Shape rule, not a saved spacing rule.
+  const rule = rules.find((r) => r.id === issue.ruleId && r.category === proposal.category)
+  const baseline = rule
+    ? `${rule.name}: ${rule.value}${rule.id === "type-scale" ? `. ${rule.why}` : ""}`
+    : "No matching rule is saved in this version."
+  const { name, category, value, everywhereValue } = proposal
+  return { name, category, baseline, value: scope === "everywhere" ? everywhereValue ?? value : value }
+}
+
+export function ruleScopeLabel(scope: RuleScope): "Checkout" | "Everywhere" {
+  return scope === "checkout" ? "Checkout" : "Everywhere"
+}
+
+export function ruleDiff(proposal: RuleProposal, scope: RuleScope, why: string): Version["diff"] {
+  return [
+    { kind: "same", text: proposal.baseline },
+    { kind: "add", text: `${proposal.value} (${ruleScopeLabel(scope)})` },
+    { kind: "add", text: `why: ${why}` },
+  ]
+}
 
 export const initialVersions: Version[] = [
   {

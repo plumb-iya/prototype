@@ -106,7 +106,7 @@ function reducer(state: State, action: Action): State {
         flow:
           state.flow?.issueId === action.issueId
             ? { ...state.flow, step: "define", open: true }
-            : { issueId: issue.id, step: "define", name: proposal.name, why: "", scope: issue.screenId === "checkout" ? "checkout" : "everywhere", open: true },
+            : { issueId: issue.id, step: "define", name: proposal.name, why: "", scope: "checkout", open: true },
       }
     }
     case "updateFlow":

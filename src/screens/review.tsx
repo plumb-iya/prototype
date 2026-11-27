@@ -6,7 +6,7 @@ import { Listbox, ListboxItem } from "@ui-sdk/react/listbox"
 import { ArrowRightIcon, CheckIcon, CircleAlertIcon, FileCodeIcon, FlagIcon, LayersIcon, MinusIcon, RotateCcwIcon, ScanSearchIcon, WandSparklesIcon, WrenchIcon } from "lucide-react"
 import { Badge, Button, Hint } from "@/components/ui"
 import { CheckoutMock } from "@/components/checkout-mock"
-import { SYSTEM_NAME, getRuleProposal, impactComponents, screens, toolName, type Confidence as ConfidenceLevel, type Issue, type Screen } from "@/data"
+import { SYSTEM_NAME, getRuleProposal, screens, toolName, type Confidence as ConfidenceLevel, type Issue, type Screen } from "@/data"
 import { useIssueActions } from "@/actions"
 import { useStore } from "@/store"
 import { cn } from "@/lib/utils"
@@ -300,7 +300,6 @@ function Detail({ issue, screen }: { issue: Issue; screen: Screen }) {
   const { state, dispatch } = useStore()
   const rule = state.rules.find((r) => r.id === issue.ruleId)
   const proposal = getRuleProposal(issue, state.rules)
-  const aiTools = state.tools.filter((t) => t.id !== "figma").length
   const open = issue.status === "open"
   return (
     <section aria-label={`${issue.title}, details`} className="border-t border-line px-5 pt-4 pb-8">
@@ -343,8 +342,9 @@ function Detail({ issue, screen }: { issue: Issue; screen: Screen }) {
         <div className="mt-4">
           <h3 className="section-label">If it became a rule</h3>
           <p className="mt-1.5 leading-relaxed text-ink-2">
-            {issue.id === "pill" ? `Could reach up to ${impactComponents.length} components in 3 projects and ${aiTools} AI tools.` : proposal.value + "."}{" "}
-            You'll choose where it applies before you publish.
+            {proposal.shapeScopes
+              ? "You'll choose which buttons it covers and where before you publish."
+              : `${proposal.value}. You'll choose where it applies before you publish.`}
           </p>
         </div>
       )}

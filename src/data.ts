@@ -48,6 +48,18 @@ export interface Rule {
   isNew?: boolean
 }
 
+export type RuleScope = "checkout" | "everywhere"
+
+type ShapeScopes = Record<RuleScope, { value: string; description: string; example: string }>
+
+export interface RuleProposal {
+  name: string
+  category: Rule["category"]
+  baseline: string
+  value: string
+  shapeScopes?: ShapeScopes
+}
+
 export interface Version {
   version: number
   summary: string
@@ -148,6 +160,58 @@ export const initialRules: Rule[] = [
   { id: "content-pay", name: "Payment button label", category: "Content", value: "“Pay $amount”", why: "Showing the amount reduces checkout drop-off.", scope: "Checkout", version: 6, author: "Amber" },
 ]
 
+const proposalsByIssue = new Map<string, Pick<RuleProposal, "name" | "category"> & { value: string | ShapeScopes }>([
+  ["pill", {
+    name: "Pill-shaped button corners",
+    category: "Shape",
+    value: {
+      checkout: {
+        value: "Pay buttons may use a pill shape",
+        description: "Pill corners for Pay buttons only. Other buttons keep 8px corners.",
+        example: "On a checkout, Pay is covered. Apply coupon is not.",
+      },
+      everywhere: {
+        value: "Primary buttons may use a pill shape",
+        description: "Any primary button on any screen may use pill corners.",
+        example: "A primary Subscribe button is covered. Secondary buttons, inputs and cards are not.",
+      },
+    },
+  }],
+  ["blue", { name: "Alternate color for primary actions", category: "Color", value: "Primary actions may also use #1A6FE3" }],
+  ["primary", { name: "Two primary buttons per view", category: "Components", value: "A view may have up to two primary buttons" }],
+  ["heading", { name: "44px for other headings", category: "Type", value: "Other headings may use 44px" }],
+])
+
+export function getRuleProposal(issue: Issue, rules: Rule[], scope: RuleScope = "checkout"): RuleProposal | null {
+  const proposal = proposalsByIssue.get(issue.id)
+  if (!proposal) return null
+
+  const rule = rules.find((r) => r.id === issue.ruleId)
+  const baseline = rule
+    ? `${rule.name}: ${rule.value}${rule.id === "type-scale" ? `. ${rule.why}` : ""}`
+    : "No matching rule is saved in this version."
+  const { name, category, value } = proposal
+  return typeof value === "string"
+    ? { name, category, baseline, value }
+    : { name, category, baseline, value: value[scope].value, shapeScopes: value }
+}
+
+export function ruleScopeLabel(scope: RuleScope): "Checkout" | "Everywhere" {
+  return scope === "checkout" ? "Checkout" : "Everywhere"
+}
+
+export function scopedRuleValue(proposal: RuleProposal, scope: RuleScope): string {
+  return `${proposal.value} (${ruleScopeLabel(scope)})`
+}
+
+export function ruleDiff(proposal: RuleProposal, scope: RuleScope, why: string): Version["diff"] {
+  return [
+    { kind: "same", text: proposal.baseline },
+    { kind: "add", text: scopedRuleValue(proposal, scope) },
+    { kind: "add", text: `why: ${why}` },
+  ]
+}
+
 export const initialVersions: Version[] = [
   {
     version: 14,
@@ -182,23 +246,6 @@ export const initialVersions: Version[] = [
       { kind: "add", text: "why: Matching corners make controls read as one family." },
     ],
   },
-]
-
-export const impactComponents = [
-  "CheckoutPayButton",
-  "ExpressPayButton",
-  "PaymentRetryButton",
-  "PayPalConfirmButton",
-  "ApplePayConfirmButton",
-  "OrderSummaryCTA",
-  "PrimaryButton",
-  "SubscribeButton",
-  "CartCheckoutButton",
-  "GiftCardRedeemButton",
-  "UpsellAddButton",
-  "MobileStickyCheckout",
-  "ReturnsStartButton",
-  "CheckoutHeroCTA",
 ]
 
 export const toolName = (id: ToolId) => initialTools.find((t) => t.id === id)?.name ?? id

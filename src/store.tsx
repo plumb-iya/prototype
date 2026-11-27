@@ -1,12 +1,16 @@
 import * as React from "react"
 import {
+  getRuleProposal,
   initialIssues,
   initialRules,
   initialTools,
   initialVersions,
+  ruleDiff,
+  ruleScopeLabel,
   type Issue,
   type IssueStatus,
   type Rule,
+  type RuleScope,
   type Tool,
   type ToolId,
   type Version,
@@ -21,7 +25,7 @@ export interface RuleFlow {
   step: FlowStep
   name: string
   why: string
-  scope: "checkout" | "everywhere"
+  scope: RuleScope
   published?: boolean
   open: boolean
 }
@@ -55,14 +59,6 @@ type Action =
   | { type: "modal"; modal: "allow" | "wrong" | null }
   | { type: "guide"; patch: Partial<State["guide"]> }
   | { type: "reset" }
-
-const FLOW_NAMES: Record<string, string> = {
-  pill: "Checkout pay button uses a pill shape",
-  blue: "Add #1A6FE3 to the palette",
-  primary: "Checkout can show two primary buttons",
-  heading: "Headings can use 44px",
-  "settings-toggle": "Toggles can use green when on",
-}
 
 const initialState: State = {
   view: "inbox",
@@ -100,30 +96,38 @@ function reducer(state: State, action: Action): State {
       return { ...state, selectedIssueId: action.issueId }
     case "setStatus":
       return { ...state, issues: state.issues.map((i) => (i.id === action.issueId ? { ...i, status: action.status } : i)) }
-    case "startFlow":
+    case "startFlow": {
+      const issue = state.issues.find((i) => i.id === action.issueId)
+      if (!issue) return state
+      const proposal = getRuleProposal(issue, state.rules)
+      if (!proposal) return state
       return {
         ...state,
         flow:
           state.flow?.issueId === action.issueId
             ? { ...state.flow, step: "define", open: true }
-            : { issueId: action.issueId, step: "define", name: FLOW_NAMES[action.issueId] ?? "New rule", why: "", scope: "checkout", open: true },
+            : { issueId: issue.id, step: "define", name: proposal.name, why: "", scope: "checkout", open: true },
       }
+    }
     case "updateFlow":
       return state.flow ? { ...state, flow: { ...state.flow, ...action.patch } } : state
     case "closeFlow":
       return { ...state, flow: !state.flow || state.flow.step === "publish" ? null : { ...state.flow, step: "define", open: false } }
     case "publish": {
       const f = state.flow
-      if (!f) return state
+      if (f?.step !== "publish" || !f.open || f.why.trim().length < 8) return state
+      const issue = state.issues.find((i) => i.id === f.issueId)
+      if (issue?.status !== "open") return state
+      const proposal = getRuleProposal(issue, state.rules, f.scope)
+      if (!proposal) return state
       const v = state.systemVersion + 1
-      const scope = f.scope === "checkout" ? "Checkout" : "Everywhere"
       const rule: Rule = {
         id: `rule-v${v}`,
         name: f.name,
-        category: "Shape",
-        value: f.issueId === "pill" ? "Pill radius on the pay button" : state.issues.find((i) => i.id === f.issueId)?.found ?? "",
+        category: proposal.category,
+        value: proposal.value,
         why: f.why,
-        scope,
+        scope: ruleScopeLabel(f.scope),
         version: v,
         author: "Amber",
         isNew: true,
@@ -133,11 +137,7 @@ function reducer(state: State, action: Action): State {
         summary: `Added rule: ${f.name}`,
         author: "Amber",
         when: "Just now",
-        diff: [
-          { kind: "same", text: "radius.control: 8px" },
-          { kind: "add", text: f.issueId === "pill" ? `radius.pay-button: pill  # ${scope.toLowerCase()}` : `rule: ${f.name}  # ${scope.toLowerCase()}` },
-          { kind: "add", text: `why: ${f.why}` },
-        ],
+        diff: ruleDiff(proposal, f.scope, f.why),
       }
       return {
         ...state,

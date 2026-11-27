@@ -10,7 +10,7 @@ import { Timeline, TimelineConnector, TimelineDescription, TimelineItem, Timelin
 import { AlertTriangleIcon, ArrowLeftIcon, ArrowRightIcon, CheckIcon, Loader2Icon, MinusIcon, XIcon } from "lucide-react"
 import { Button, buttonClass, dialogBackdrop, dialogContent, fieldLabel, inputClass, textareaClass } from "@/components/ui"
 import { ToolTile } from "@/components/shell"
-import { SYSTEM_NAME, impactComponents } from "@/data"
+import { SYSTEM_NAME, getRuleProposal, ruleDiff, scopedRuleValue, type Issue, type RuleProposal } from "@/data"
 import { useStore, type FlowStep } from "@/store"
 import { cn } from "@/lib/utils"
 
@@ -24,6 +24,7 @@ export function RuleFlow() {
   const { state, dispatch } = useStore()
   const flow = state.flow
   const issue = state.issues.find((i) => i.id === flow?.issueId)
+  const proposal = issue && getRuleProposal(issue, state.rules, flow?.scope)
   const stepIndex = flow ? (flow.published ? STEPS.length : STEPS.findIndex((s) => s.id === flow.step)) : 0
 
   return (
@@ -56,9 +57,9 @@ export function RuleFlow() {
           <DialogClose aria-label="Close" className={buttonClass("ghost", "icon", "absolute top-3 right-3 z-10")}>
             <XIcon />
           </DialogClose>
-          {flow?.step === "define" && <Define />}
-          {flow?.step === "impact" && <Impact />}
-          {flow?.step === "publish" && <Publish />}
+          {proposal && flow?.step === "define" && <Define proposal={proposal} />}
+          {proposal && issue && flow?.step === "impact" && <Impact proposal={proposal} issue={issue} />}
+          {proposal && flow?.step === "publish" && <Publish proposal={proposal} />}
         </div>
       </DialogContent>
     </Dialog>
@@ -77,10 +78,10 @@ function Footer({ children }: { children: React.ReactNode }) {
   return <div className="mt-auto flex items-center gap-2 border-t border-line bg-paper/40 px-7 py-3.5">{children}</div>
 }
 
-function Define() {
+function Define({ proposal }: { proposal: RuleProposal }) {
   const { state, dispatch } = useStore()
   const flow = state.flow!
-  const issue = state.issues.find((i) => i.id === flow.issueId)
+
   const [tried, setTried] = React.useState(false)
   const whyRef = React.useRef<HTMLTextAreaElement>(null)
   const whyInvalid = tried && flow.why.trim().length < 8
@@ -124,8 +125,8 @@ function Define() {
             <FieldLabel className={fieldLabel}>Where it applies</FieldLabel>
             <RadioGroup value={flow.scope} onValueChange={(v) => v && dispatch({ type: "updateFlow", patch: { scope: v as "checkout" | "everywhere" } })} className="grid gap-2">
               {[
-                ["checkout", "Checkout screens only", "Every other button keeps 8px corners."],
-                ["everywhere", "Everywhere", "Replaces the rule for every primary button."],
+                ["checkout", "Checkout screens only", proposal.shapeScopes?.checkout.description ?? "Other screens keep their current rules."],
+                ["everywhere", "Everywhere", proposal.shapeScopes?.everywhere.description ?? "Allow this on other screens too."],
               ].map(([v, t, d]) => (
                 <label key={v} className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-line p-3 transition-colors hover:bg-paper/60 has-data-checked:border-ink has-data-checked:bg-paper/60">
                   <Radio value={v} className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-edge bg-surface data-checked:border-ink data-checked:bg-ink">
@@ -143,11 +144,12 @@ function Define() {
 
         <div>
           <h3 className="section-label mb-2">How AI tools will read it</h3>
-          <pre className="rounded-lg bg-ink p-4 font-mono text-micro leading-relaxed whitespace-pre-wrap text-paper">
+          <pre className="rounded-lg bg-ink p-4 font-mono text-micro leading-relaxed break-words whitespace-pre-wrap text-paper">
 {`## ${flow.name}
 
+current: ${proposal.baseline}
+allow: ${proposal.value}
 applies to: ${scopeLabel}
-replaces:   "${issue?.ruleText}"
 
 why: ${flow.why.trim() || "(add a reason)"}
 
@@ -167,11 +169,11 @@ UI, and don't flag it as drift.`}
   )
 }
 
-function Impact() {
+function Impact({ proposal, issue }: { proposal: RuleProposal; issue: Issue }) {
   const { state, dispatch } = useStore()
   const flow = state.flow!
   const everywhere = flow.scope === "everywhere"
-  const components = everywhere ? impactComponents : impactComponents.slice(0, 6)
+  const example = proposal.shapeScopes?.[flow.scope].example
   const tools = state.tools.filter((t) => t.id !== "figma")
   const next = state.systemVersion + 1
 
@@ -180,39 +182,31 @@ function Impact() {
       <StepHeader title="Here's what this rule reaches" />
       <div className="min-h-0 flex-1 overflow-y-auto px-7 pb-6">
         <p className="mb-6 max-w-[56ch] text-body leading-relaxed text-ink-2">
-          This rule changes <strong className="font-semibold text-ink">{components.length} components</strong> in{" "}
-          <strong className="font-semibold text-ink">{everywhere ? "3 projects" : "1 project"}</strong> and reaches{" "}
-          <strong className="font-semibold text-ink">{tools.length} AI tools</strong>.
+          Applies to <strong className="font-semibold text-ink">{everywhere ? "every screen" : "checkout screens only"}</strong>.
+          Jordan's screen is unchanged.
         </p>
 
         <h3 className="section-label mb-2">Change to {SYSTEM_NAME}, v{state.systemVersion} to v{next}</h3>
-        <div className="mb-5 overflow-hidden rounded-lg border border-line font-mono text-small">
-          <div className="flex gap-3 px-3.5 py-1.5 text-muted"><span className="w-2"> </span>radius.control: 8px</div>
-          <div className="flex gap-3 bg-ok-soft px-3.5 py-1.5 text-ok"><span className="w-2">+</span>radius.pay-button: pill  # {everywhere ? "everywhere" : "checkout only"}</div>
-          <div className="flex gap-3 bg-ok-soft px-3.5 py-1.5 text-ok"><span className="w-2">+</span><span className="min-w-0">why: {flow.why}</span></div>
+        <p className="mb-2 font-medium break-words">{flow.name}</p>
+        <div role="group" aria-label="Proposed rule changes" className="mb-3 overflow-hidden rounded-lg border border-line font-mono text-small">
+          {ruleDiff(proposal, flow.scope, flow.why).map((line, i) => (
+            <div key={i} className={cn("flex gap-3 px-3.5 py-1.5", line.kind === "add" ? "bg-ok-soft text-ok" : "text-muted")}>
+              <span className="w-2 shrink-0" aria-hidden="true">{line.kind === "add" ? "+" : " "}</span>
+              <span className="min-w-0 break-words"><span className="sr-only">{line.kind === "add" ? "Added: " : "Current: "}</span>{line.text}</span>
+            </div>
+          ))}
         </div>
 
         <div className="grid grid-cols-[minmax(0,1fr)_240px] gap-5">
           <div>
-            <h3 className="section-label mb-2">Components that change</h3>
-            <div className="flex flex-wrap gap-1.5">
-              {components.map((c) => (
-                <span key={c} className="inline-flex items-center gap-2 rounded-md border border-line bg-paper/50 py-1 pr-2 pl-2.5 font-mono text-micro">
-                  {c}
-                  <span className="flex items-center gap-1" aria-hidden="true">
-                    <span className="h-2.5 w-5 rounded-[2px] bg-brand" />
-                    <ArrowRightIcon className="size-2.5 text-faint" />
-                    <span className="h-2.5 w-5 rounded-full bg-brand" />
-                  </span>
-                </span>
-              ))}
-            </div>
+            <h3 className="section-label mb-2">{example ? "Example" : "On Jordan's checkout"}</h3>
+            <p className="text-body text-ink-2">{example ?? issue.found}</p>
           </div>
           <div>
             <h3 className="section-label mb-2">Who gets the new rule</h3>
             <div className="divide-y divide-line rounded-lg border border-line">
               {tools.map((t) => (
-                <div key={t.id} className="flex items-center gap-2.5 px-3 py-2">
+                <div key={t.id} className="flex items-center gap-2.5 px-3 py-1.5">
                   <ToolTile id={t.id} className="size-6" />
                   <span className="flex-1 font-medium">{t.name}</span>
                   {t.connected ? (
@@ -223,7 +217,7 @@ function Impact() {
                 </div>
               ))}
             </div>
-            {tools.some((t) => !t.connected) && <p className="mt-2 text-caption text-pretty text-muted">Replit gets this rule once you reconnect it.</p>}
+            {tools.some((t) => !t.connected) && <p className="mt-2 text-caption text-muted">Reconnect Replit to share this rule.</p>}
             <label className="mt-3 flex cursor-pointer items-center justify-between rounded-lg border border-line px-3 py-2.5">
               Tell Jordan and Sam
               <Switch defaultChecked className="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full bg-line-strong p-0.5 transition-colors data-checked:bg-ink">
@@ -240,7 +234,7 @@ function Impact() {
         <span className="ml-auto text-caption text-muted">You can revert this from History at any time.</span>
         <Button
           variant="primary"
-          data-agent-confirm={`Publishes "${flow.name}" to ${SYSTEM_NAME} and every connected AI tool`}
+          data-agent-confirm={`publish ${SYSTEM_NAME} v${next} with this rule: ${scopedRuleValue(proposal, flow.scope)}`}
           onClick={() => dispatch({ type: "updateFlow", patch: { step: "publish" } })}
         >
           Approve and publish v{next}
@@ -250,7 +244,7 @@ function Impact() {
   )
 }
 
-function Publish() {
+function Publish({ proposal }: { proposal: RuleProposal }) {
   const { state, dispatch } = useStore()
   const flow = state.flow!
   const [target] = React.useState(state.systemVersion + 1)
@@ -291,7 +285,11 @@ function Publish() {
   return (
     <>
       <StepHeader title={finished ? `${SYSTEM_NAME} v${target} is live` : "Sending your rule to every tool"} />
-      <div className="min-h-0 flex-1 px-7 pb-6">
+      <section
+        aria-label="Publishing details"
+        tabIndex={0}
+        className="min-h-0 flex-1 overflow-y-auto px-7 pb-6 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
+      >
         <Progress value={pct} aria-label="Publishing progress" className="mb-6">
           <ProgressTrack className="h-1 overflow-hidden rounded-full bg-paper-2">
             <ProgressIndicator className="h-full w-(--progress-value) rounded-full bg-ink transition-[width] duration-500" />
@@ -320,12 +318,15 @@ function Publish() {
         {finished && (
           <div className="mt-7 flex items-start gap-3 rounded-lg bg-ok-soft p-4 text-ok">
             <CheckIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            <p className="leading-relaxed">
-              The pay button flag is resolved. Claude and Lovable now treat the pill as correct on {flow.scope === "everywhere" ? "every screen" : "checkout screens"}.
+            <p className="min-w-0 leading-relaxed break-words">
+              <strong className="block font-semibold">
+                {proposal.value}. Applies to {flow.scope === "everywhere" ? "every screen" : "checkout screens only"}. The flag is resolved.
+              </strong>
+              <span className="mt-0.5 block">{flow.name}</span>
             </p>
           </div>
         )}
-      </div>
+      </section>
       <Footer>
         {finished ? (
           <>
